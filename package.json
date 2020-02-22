@@ -1,0 +1,16 @@
+{
+  "name": "linux-file",
+  "version": "1.0.0",
+  "description": "Make linux file easily",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "chirgjin <chirgjin@gmail.com>",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1",
+    "uuidv4": "^6.0.2",
+    "xterm": "^4.4.0"
+  }
+}

@@ -1,0 +1,223 @@
+<!doctype html>
+<html>
+<head>
+    <link rel="stylesheet" href="xterm/css/xterm.css" />
+    <script src="xterm/lib/xterm.js"></script>
+    <script src="https://code.jquery.com/jquery.min.js"></script>
+    <script src="https://files.codepedia.info/files/uploads/iScripts/html2canvas.js"></script> 
+    <script src="./jszip.min.js"></script>
+    <style>
+        .terminal-container {
+            width:978px;
+            margin:auto;
+            position:relative;
+        }
+        .terminal-header {
+            height:31px;
+            background:url(bg.png);
+            background-size:cover;
+            width:100%;
+            border:1px solid black;
+            border-bottom:0px;
+            /* display:none; */
+        }
+
+        .terminal-head-text {
+            left:35px;
+            top:8px;
+            position:absolute;
+            font-size:15px;
+            font-family:'Courier New', Courier, monospace;
+        }
+    </style>
+</head>
+<body>
+    <!-- <div id="terminal-container">
+        <div id="terminal-header">
+            <span id="terminal-head-text">chirgjin@chirgjin</span>
+        </div>
+        <div id="terminal"></div>
+    </div>
+    <script>
+        var term = new Terminal();
+        term.open(document.getElementById('terminal'));
+
+        let username = 'chirgjin@chirgjin';
+
+        document.getElementById("terminal-head-text").innerText = (username);
+        
+        term.writeln(getPrefix());
+        term.writeln(getPrefix());
+
+
+    </script> -->
+
+    <form action="#" id="myform">
+
+        <div id="message"></div>
+
+        <label for="commands">Command Files: </label>
+        <input type="file" name="commands" id="commands" multiple required /><br>
+
+        <br>
+
+        <label for="users" >Users (Comma Separated Values) : </label>
+        <input type="text" name="users" id="users" required />
+
+        <br>
+        <input type="submit" value="Generate">
+    </form>
+</body>
+</html>
+
+<script>
+
+    function fileToText(file) {
+        const reader = new FileReader();
+
+        return new Promise(resolve => {
+            reader.onload = e => {
+                resolve(e.target.result)
+            };
+
+            reader.readAsText(file);
+        })
+    }
+
+    function wait(ms=1000) {
+        return new Promise(resolve => {
+            setTimeout(() => resolve(), ms);
+        });
+    }
+
+    $("#myform").submit( async e => {
+        e.preventDefault();
+
+        const files = document.getElementById("commands").files;
+
+        const commands = [];
+
+        for(let i=0;i<files.length;i++) {
+            commands.push({
+                text : await fileToText(files[i]),
+                name : files[i].name
+            });
+        }
+
+        const span = $("#message").html("Running " + commands.length + " commands!<br><span></span>").find("span");
+
+        for(let command of commands) {
+            span.text("running command: " + command.text);
+            command.results = await $.post("/run", { commands: command.text  });
+            span.text("command " + command.text + " run successfully");
+        }
+
+        generateOutputs(commands, $("#users").val().split(","));
+    });
+
+    //terminal related functions
+
+    function getPrefix(user=null, path='~') {
+        return `\x1B[1;32m${user}:\x1B[1;34m${path}\x1B[0m$ `;
+    }
+
+    function generateOutput(command, term, username) {
+
+        term.clear();
+        term.writeln(getPrefix(username));
+        term.writeln(getPrefix(username));
+        
+
+        command.results.forEach(result => {
+            term.writeln(getPrefix(username) + result.command);
+            term.writeln(result.stdout.replace(/([A-Za-z0-9])\n/g, "$1\t"));
+        })
+    }
+
+    function getSS(el) {
+        return new Promise(resolve => {
+            html2canvas($(el), {
+                onrendered : canvas => {
+                    canvas.toBlob(blob => {
+                        resolve(blob)
+                    })
+                }
+            })
+        })
+    }
+
+    async function generateOutputs(commands, users) {
+        $("#myform").replaceWith("<div id='terminal-container' ></div>");
+
+        const c = $("#terminal-container");
+        users = users.map(user => {
+
+            const username = `${user}@${user}`;
+            const el = $("<div class='terminal-container' ><div class='terminal-header' ><span class='terminal-head-text' >" + username + "</span></div><div class='terminal' ></div></div>");
+            c.append(el);
+
+            const t = el.find(".terminal").get(0);
+
+            const term = new Terminal();
+            term.open(t);
+            term.resize(105, 30)
+
+
+            // generateOutput()
+            return {
+                user,
+                username,
+                element : el,
+                term,
+                blobs : []
+            }
+        });
+
+        for(let command of commands) {
+
+            for(let user of users) {
+                generateOutput(command, user.term, user.username)
+            }
+
+            await wait(2500);
+
+            for(let user of users) {
+                user.blobs.push({
+                    command : command.name,
+                    blob : await getSS(user.element)
+                })
+            }
+        }
+
+        const zip = new JSZip();
+
+        for(let user of users) {
+
+            zip.folder(user.user);
+
+            user.blobs.forEach(({command, blob}) => {
+                zip.file(`${user.user}/${command}.png`, blob)
+            });
+
+        }
+
+        const blob = await zip.generateAsync({
+            type : "blob",
+        });
+
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "linux-outputs.zip";
+        document.body.appendChild(a);
+        a.click();
+
+        await wait(10000);
+        URL.revokeObjectURL(url);
+        a.parentNode.removeChild(a);
+        
+        console.log(users);
+        window.d = { users, commands }
+    }
+</script>
