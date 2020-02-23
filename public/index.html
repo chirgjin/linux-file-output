@@ -63,6 +63,10 @@
 
         <label for="users" >Users (Comma Separated Values) : </label>
         <input type="text" name="users" id="users" required />
+        <br>
+
+        <label for="users" >Current Username : </label>
+        <input type="text" name="cname" id="cname" required />
 
         <br>
         <input type="submit" value="Generate">
@@ -112,7 +116,7 @@
             span.text("command " + command.text + " run successfully");
         }
 
-        generateOutputs(commands, $("#users").val().split(","));
+        generateOutputs(commands, $("#users").val().split(","), $("#cname").val());
     });
 
     //terminal related functions
@@ -121,7 +125,7 @@
         return `\x1B[1;32m${user}:\x1B[1;34m${path}\x1B[0m$ `;
     }
 
-    function generateOutput(command, term, username) {
+    function generateOutput(command, term, username, {user, cname}) {
 
         term.clear();
         term.writeln(getPrefix(username));
@@ -130,7 +134,7 @@
 
         command.results.forEach(result => {
             term.writeln(getPrefix(username) + result.command);
-            term.writeln(result.stdout.replace(/([A-Za-z0-9])\n/g, "$1\t"));
+            term.writeln(result.stdout.replace(/([A-Za-z0-9])\n/g, "$1\t").replace(cname, user));
         })
     }
 
@@ -146,7 +150,7 @@
         })
     }
 
-    async function generateOutputs(commands, users) {
+    async function generateOutputs(commands, users, cname) {
         $("#myform").replaceWith("<div id='terminal-container' ></div>");
 
         const c = $("#terminal-container");
@@ -176,7 +180,7 @@
         for(let command of commands) {
 
             for(let user of users) {
-                generateOutput(command, user.term, user.username)
+                generateOutput(command, user.term, user.username, {user: user.user, cname})
             }
 
             await wait(2500);
