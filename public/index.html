@@ -128,13 +128,18 @@
     function generateOutput(command, term, username, {user, cname}) {
 
         term.clear();
-        term.writeln(getPrefix(username));
-        term.writeln(getPrefix(username));
         
+        let path = '~';
 
+        term.writeln(getPrefix(username, path));
+        term.writeln(getPrefix(username, path));
         command.results.forEach(result => {
-            term.writeln(getPrefix(username) + result.command);
-            term.writeln(result.stdout.replace(/([A-Za-z0-9])\n/g, "$1\t").replace(cname, user));
+            term.writeln(getPrefix(username, path) + result.command);
+            term.writeln(result.stdout.replace(/([A-Za-z0-9])\n/g, "$1\t").replace( new RegExp(cname,"ig"), user));
+
+            if(result.command.match(/cd\s/i)) {
+                path = result.command.replace(/cd\s/, '').trim();
+            }
         })
     }
 

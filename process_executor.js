@@ -8,6 +8,12 @@ function runCmd(file) {
 
         // const stdin = 
 
+        const cont = fs.readFileSync(file);
+
+        if(cont.match(/alias/i)) {
+            file = "-c \"" + cont.replace(/"/g, "\\\"") + "\"";
+        }
+
         const term = child_process.exec("bash " + file, {
             cwd : __dirname,
             shell : true,
