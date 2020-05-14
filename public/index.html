@@ -135,7 +135,10 @@
         term.writeln(getPrefix(username, path));
         command.results.forEach(result => {
             term.writeln(getPrefix(username, path) + result.command);
-            term.writeln(result.stdout.replace(/([A-Za-z0-9])\n/g, "$1\t").replace( new RegExp(cname,"ig"), user));
+            
+            result.stdout.replace( new RegExp(cname,"ig"), user).split("\n").forEach(line => {
+                term.writeln(line);
+            });
 
             if(result.command.match(/cd\s/i)) {
                 path = result.command.replace(/cd\s/, '').trim();
